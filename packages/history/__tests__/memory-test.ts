@@ -58,12 +58,6 @@ describe("a memory history", () => {
     });
   });
 
-  describe("listen", () => {
-    it("does not immediately call listeners", (done) => {
-      Listen(history, done);
-    });
-  });
-
   describe("push", () => {
     it("pushes the new location", () => {
       PushNewLocation(history);

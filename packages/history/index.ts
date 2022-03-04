@@ -121,28 +121,6 @@ export interface Location extends Path {
 }
 
 /**
- * A change to the current location.
- */
-export interface Update {
-  /**
-   * The action that triggered the change.
-   */
-  action: Action;
-
-  /**
-   * The new location.
-   */
-  location: Location;
-}
-
-/**
- * A function that receives notifications about location changes.
- */
-export interface Listener {
-  (update: Update): void;
-}
-
-/**
  * Describes a location that is the destination of some navigation, either via
  * `history.push` or `history.replace`. May be either a URL or the pieces of a
  * URL path.
@@ -215,17 +193,6 @@ export interface History {
    * @see https://github.com/remix-run/history/tree/main/docs/api-reference.md#history.go
    */
   go(delta: number): void;
-
-  /**
-   * Sets up a listener that will be called whenever the current location
-   * changes.
-   *
-   * @param listener - A function that will be called when the location changes
-   * @returns unlisten - A function that may be used to stop listening
-   *
-   * @see https://github.com/remix-run/history/tree/main/docs/api-reference.md#history.listen
-   */
-  listen(listener: Listener): () => void;
 }
 
 /**
@@ -267,15 +234,17 @@ export function createMemoryHistory(
   let { initialEntries = ["/"], initialIndex } = options;
   let entries: Location[]; // Declare so we can access from createLocation
   entries = initialEntries.map((entry) => createLocation(entry));
-  let index = clamp(
-    initialIndex == null ? entries.length - 1 : initialIndex,
-    0,
-    entries.length - 1
+  let index = clampIndex(
+    initialIndex == null ? entries.length - 1 : initialIndex
   );
   let action = Action.Pop;
-  let getCurrentLocation = (): Location => entries[index];
-  let listeners = createEvents<Listener>();
 
+  function clampIndex(n: number): number {
+    return Math.min(Math.max(n, 0), entries.length - 1);
+  }
+  function getCurrentLocation(): Location {
+    return entries[index];
+  }
   function createLocation(to: To, state: any = null): Location {
     const location = readOnly<Location>({
       pathname: entries ? getCurrentLocation().pathname : "/",
@@ -318,12 +287,8 @@ export function createMemoryHistory(
       entries[index] = createLocation(to, state);
     },
     go(delta: number) {
-      let nextIndex = clamp(index + delta, 0, entries.length - 1);
       action = Action.Pop;
-      index = nextIndex;
-    },
-    listen(listener) {
-      return listeners.push(listener);
+      index = clampIndex(index + delta);
     },
   };
 
@@ -354,35 +319,6 @@ function warning(cond: any, message: string) {
       // eslint-disable-next-line no-empty
     } catch (e) {}
   }
-}
-
-function clamp(n: number, lowerBound: number, upperBound: number) {
-  return Math.min(Math.max(n, lowerBound), upperBound);
-}
-
-type Events<F> = {
-  length: number;
-  push: (fn: F) => () => void;
-  call: (arg: any) => void;
-};
-
-function createEvents<F extends Function>(): Events<F> {
-  let handlers: F[] = [];
-
-  return {
-    get length() {
-      return handlers.length;
-    },
-    push(fn: F) {
-      handlers.push(fn);
-      return function () {
-        handlers = handlers.filter((handler) => handler !== fn);
-      };
-    },
-    call(arg) {
-      handlers.forEach((fn) => fn && fn(arg));
-    },
-  };
 }
 
 function createKey() {
