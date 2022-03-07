@@ -196,6 +196,13 @@ export interface History {
 }
 
 /**
+ * A function that receives notifications about pop location changes.
+ */
+export interface PopListener {
+  (location: Location): void;
+}
+
+/**
  * A memory history stores locations in memory. This is useful in stateful
  * environments where there is no web browser, such as node tests or React
  * Native.
@@ -220,6 +227,7 @@ export type InitialEntry = string | Partial<Location>;
 export type MemoryHistoryOptions = {
   initialEntries?: InitialEntry[];
   initialIndex?: number;
+  onPopState?: PopListener;
 };
 
 /**
@@ -231,7 +239,7 @@ export type MemoryHistoryOptions = {
 export function createMemoryHistory(
   options: MemoryHistoryOptions = {}
 ): MemoryHistory {
-  let { initialEntries = ["/"], initialIndex } = options;
+  let { initialEntries = ["/"], initialIndex, onPopState } = options;
   let entries: Location[]; // Declare so we can access from createLocation
   entries = initialEntries.map((entry) => createLocation(entry));
   let index = clampIndex(
@@ -289,6 +297,7 @@ export function createMemoryHistory(
     go(delta: number) {
       action = Action.Pop;
       index = clampIndex(index + delta);
+      onPopState?.(getCurrentLocation());
     },
   };
 

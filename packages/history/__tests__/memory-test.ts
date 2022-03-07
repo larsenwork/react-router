@@ -1,4 +1,5 @@
-import { createMemoryHistory, MemoryHistory } from "../index";
+import type { Location, MemoryHistory } from "../index";
+import { createMemoryHistory } from "../index";
 
 import Listen from "./TestSequences/Listen";
 import InitialLocationHasKey from "./TestSequences/InitialLocationHasKey";
@@ -16,9 +17,12 @@ import GoForward from "./TestSequences/GoForward";
 
 describe("a memory history", () => {
   let history: MemoryHistory;
+  let onPopSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    history = createMemoryHistory();
+    onPopSpy = jest.fn();
+    //@ts-ignore
+    history = createMemoryHistory({ onPopState: onPopSpy });
   });
 
   it("has an index property", () => {
@@ -104,11 +108,24 @@ describe("a memory history", () => {
 
   describe("go", () => {
     it("goes back", () => {
-      GoBack(history);
+      GoBack(history, onPopSpy);
     });
     it("goes forward", () => {
-      GoForward(history);
+      GoForward(history, onPopSpy);
     });
+  });
+});
+
+describe("a memory history without an onPopState callback", () => {
+  it("fails gracefully on go() calls", () => {
+    let history = createMemoryHistory();
+    history.push("/page1");
+    history.push("/page2");
+    expect(history.location.pathname).toBe("/page2");
+    history.go(-2);
+    expect(history.location.pathname).toBe("/");
+    history.go(1);
+    expect(history.location.pathname).toBe("/page1");
   });
 });
 
